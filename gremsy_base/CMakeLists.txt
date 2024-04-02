@@ -11,9 +11,23 @@ find_package(catkin REQUIRED COMPONENTS
         std_msgs
         geometry_msgs
         sensor_msgs
+        message_generation
         )
 
 find_package(Eigen3 REQUIRED)
+
+add_service_files(
+  DIRECTORY srv
+  FILES
+  GimbalPos.srv
+  GimbalMode.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  geometry_msgs
+  std_msgs
+)
 
 generate_dynamic_reconfigure_options(
         cfg/ROSGremsy.cfg
@@ -21,6 +35,7 @@ generate_dynamic_reconfigure_options(
 
 catkin_package(
         INCLUDE_DIRS include
+        CATKIN_DEPENDS message_runtime
 )
 
 include_directories(

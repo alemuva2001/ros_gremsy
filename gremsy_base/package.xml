@@ -20,4 +20,7 @@
   <depend>tf2_eigen</depend>
   <depend>eigen</depend>
   <depend>tf2_geometry_msgs</depend>
+  
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
 </package>
