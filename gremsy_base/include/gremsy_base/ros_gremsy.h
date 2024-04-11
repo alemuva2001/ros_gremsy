@@ -81,24 +81,3 @@ private:
 
 
 };
-
-/*
-class GimbalControlNode
-{
-public: 
-    GimbalControlNode(ros::NodeHandle nh);
-private:
-
-    // Init state variables
-    geometry_msgs::Vector3 pos;
-    char operacion;
-    bool cw1 = false, cw2 = false, cw3 = false;
-
-    ros::Publisher pos_pub;
-
-    void console();
-    void controller();
-    static void foo(char* op);
-    
-};
-*/

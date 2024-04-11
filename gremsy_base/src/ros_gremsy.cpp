@@ -62,9 +62,6 @@ GimbalNode::GimbalNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         ros::Duration(0.2).sleep();
     }
 
-    // Configure the gimbal to send angles as encoder values
-    gimbal_interface_->set_gimbal_encoder_type_send(false);
-
     ros::Timer poll_timer = nh.createTimer(
         ros::Duration(1/config_.state_poll_rate),
         &GimbalNode::gimbalStateTimerCallback, this);
@@ -74,6 +71,16 @@ GimbalNode::GimbalNode(ros::NodeHandle nh, ros::NodeHandle pnh)
         &GimbalNode::gimbalGoalTimerCallback, this);
 
     gimbal_interface_->set_gimbal_lock_mode_sync();
+
+    // Configure the gimbal to send angles as encoder values
+    if(config_.encoder_type == 1){
+        gimbal_interface_->set_gimbal_encoder_type_send(false);
+        ROS_INFO("Gimbal encoder provides angle\n");
+    }
+    if(config_.encoder_type == 0){
+        gimbal_interface_->set_gimbal_encoder_type_send(true);
+        ROS_INFO("Gimbal encoder provides encoder values\n");
+    }
     
     ros::spin();
 }
@@ -98,7 +105,7 @@ void GimbalNode::gimbalStateTimerCallback(const ros::TimerEvent& event)
     angle_ros_msg.header.stamp = ros::Time::now();
     //Eje Z
     angle_ros_msg.vector.z = ((float) encoder_values.yaw + 17570)/182;
-    if (encoder_ros_msg.vector.z > 180) encoder_ros_msg.vector.z -= 360;
+    //if (encoder_ros_msg.vector.z > 180) encoder_ros_msg.vector.z -= 360;
 
     //Eje Y
     angle_ros_msg.vector.y = ((float) encoder_values.pitch + 29290)/181;
@@ -107,14 +114,21 @@ void GimbalNode::gimbalStateTimerCallback(const ros::TimerEvent& event)
     //Eje X
     angle_ros_msg.vector.x = ((float) encoder_values.roll + 5588)/182;
 
+    if(config_.encoder_type == 1) angle_ros_msg = encoder_ros_msg;
+
     // Initialize gimbal 
     if (mode > 5) GimbalNode::initialization();
     //gimbal_interface_->set_gimbal_lock_mode_sync();
 
+
     if (encoder_values.roll or encoder_values.pitch or encoder_values.yaw)
     {
         encoder_pub.publish(encoder_ros_msg);
-        angle_pub.publish(angle_ros_msg); 
+        angle_pub.publish(angle_ros_msg);
+
+
+        ROS_INFO("diff: x: %f\t y: %f\t z:%f\n",offset_x + goals_.vector.x - angle_ros_msg.vector.x, offset_y + goals_.vector.y - angle_ros_msg.vector.y, offset_z + goals_.vector.z - angle_ros_msg.vector.z);
+        ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
     }
 
     //// Publish Gimbal IMU (Currently this deadlocks)
@@ -161,12 +175,19 @@ void GimbalNode::gimbalGoalTimerCallback(const ros::TimerEvent& event)
 
 bool GimbalNode::setGoalSrvCallback(gremsy_base::GimbalPos::Request& req, gremsy_base::GimbalPos::Response& res)
 {
+    if (mode == 0){
+    offset_x = angle_ros_msg.vector.x - goals_.vector.x;
+    offset_y = angle_ros_msg.vector.y - goals_.vector.y;
+    offset_z = angle_ros_msg.vector.z - goals_.vector.z;
+    }
+
     goals_.header.stamp = ros::Time::now();
     goals_.vector.x = req.pos.x; goals_.vector.y = req.pos.y; goals_.vector.z = req.pos.z;
 
     //Store the current location to mode change
     offs.vector.x = req.pos.x; offs.vector.y = req.pos.y; offs.vector.z = req.pos.z;
 
+    //Change position taking into account the offset
     if (mode == 0){
 
         goals_.vector.x = goals_.vector.x - offset_x;
@@ -176,7 +197,7 @@ bool GimbalNode::setGoalSrvCallback(gremsy_base::GimbalPos::Request& req, gremsy
     }
 
     ROS_INFO("Goal: x: %f\t y: %f\t z: %f", goals_.vector.x, goals_.vector.y, goals_.vector.z);
-    ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f", offset_x, offset_y, offset_z);
+    ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
 
     res.success = true;
 
@@ -185,21 +206,22 @@ bool GimbalNode::setGoalSrvCallback(gremsy_base::GimbalPos::Request& req, gremsy
 
 void GimbalNode::setGoalsCallback(geometry_msgs::Vector3Stamped message)
 {
+
     goals_ = message;
 
     //Store the current location to mode change
     offs = message;
 
-    if (mode == 0){
+     if (mode == 0){
 
-        goals_.vector.x = goals_.vector.x - offset_x;
-        goals_.vector.y = goals_.vector.y - offset_y;
-        goals_.vector.z = goals_.vector.z - offset_z;
+         goals_.vector.x = goals_.vector.x - offset_x;
+         goals_.vector.y = goals_.vector.y - offset_y;
+         goals_.vector.z = goals_.vector.z - offset_z;
 
     }
 
     ROS_INFO("Goal: x: %f\t y: %f\t z: %f", goals_.vector.x, goals_.vector.y, goals_.vector.z);
-    ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f", offset_x, offset_y, offset_z);
+    ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
 }
 
 //Cambio el modo del Gimbal
@@ -210,6 +232,8 @@ bool GimbalNode::setModeSrvCallback(gremsy_base::GimbalMode::Request& req, grems
     
     if(req.mode == 1){
 
+        offs = angle_ros_msg;
+
         mode = 1;
 
         gimbal_interface_->set_gimbal_follow_mode_sync();
@@ -218,9 +242,11 @@ bool GimbalNode::setModeSrvCallback(gremsy_base::GimbalMode::Request& req, grems
 
         mode = 0;
 
-        gimbal_interface_->set_gimbal_lock_mode_sync();
+        gimbal_interface_->set_gimbal_lock_mode_sync(); 
 
     }
+
+    ROS_INFO("offs: x: %f\t y: %f\t z:%f\n", offs.vector.x, offs.vector.y, offs.vector.z);
     
     //It is needed to publish the location when the mode changes
     gimbal_goal_pub.publish(offs);
@@ -263,11 +289,15 @@ void GimbalNode::initialization(){
     goals_.vector.y = -offset_y;
     goals_.vector.z = -offset_z;
 
-    ros::Duration(1).sleep();
+    ros::Duration(3).sleep();
 
     gimbal_interface_->set_gimbal_follow_mode_sync();
 
+    gimbal_goal_pub.publish(offs);
+
     mode = 1;
+
+    ROS_INFO("Gimbal initiated in follow mode\n");
 }
 
 int main(int argc, char **argv)
