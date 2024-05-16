@@ -118,8 +118,8 @@ void GimbalNode::gimbalStateTimerCallback(const ros::TimerEvent& event)
         encoder_pub.publish(encoder_ros_msg);
         angle_pub.publish(angle_ros_msg);
 
-        ROS_INFO("diff: x: %f\t y: %f\t z:%f\n",offset_x + goals_.vector.x - angle_ros_msg.vector.x, offset_y + goals_.vector.y - angle_ros_msg.vector.y, offset_z + goals_.vector.z - angle_ros_msg.vector.z);
-        ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
+        //ROS_INFO("diff: x: %f\t y: %f\t z:%f\n",offset_x + goals_.vector.x - angle_ros_msg.vector.x, offset_y + goals_.vector.y - angle_ros_msg.vector.y, offset_z + goals_.vector.z - angle_ros_msg.vector.z);
+        //ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
     }
 
     //// Publish Gimbal IMU (Currently this deadlocks)
@@ -187,8 +187,8 @@ bool GimbalNode::setGoalSrvCallback(gremsy_base::GimbalPos::Request& req, gremsy
 
     }
 
-    ROS_INFO("Goal: x: %f\t y: %f\t z: %f", goals_.vector.x, goals_.vector.y, goals_.vector.z);
-    ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
+    //ROS_INFO("Goal: x: %f\t y: %f\t z: %f", goals_.vector.x, goals_.vector.y, goals_.vector.z);
+    //ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
 
     res.success = true;
 
@@ -211,8 +211,8 @@ void GimbalNode::setGoalsCallback(geometry_msgs::Vector3Stamped message)
 
     }
 
-    ROS_INFO("Goal: x: %f\t y: %f\t z: %f", goals_.vector.x, goals_.vector.y, goals_.vector.z);
-    ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
+    //ROS_INFO("Goal: x: %f\t y: %f\t z: %f", goals_.vector.x, goals_.vector.y, goals_.vector.z);
+    //ROS_INFO("OFFSET: x: %f\t y: %f\t z: %f\n", offset_x, offset_y, offset_z);
 }
 
 //Cambio el modo del Gimbal
@@ -237,7 +237,7 @@ bool GimbalNode::setModeSrvCallback(gremsy_base::GimbalMode::Request& req, grems
 
     }
 
-    ROS_INFO("offs: x: %f\t y: %f\t z:%f\n", offs.vector.x, offs.vector.y, offs.vector.z);
+    //ROS_INFO("offs: x: %f\t y: %f\t z:%f\n", offs.vector.x, offs.vector.y, offs.vector.z);
     
     //It is needed to publish the location when the mode changes
     gimbal_goal_pub.publish(offs);
